@@ -1,4 +1,4 @@
-## 1. Project Setup
+## 1. Project Setup --------------- OK
 
 Goal: Prepare a clean structure for modular development.
 
@@ -22,7 +22,7 @@ mlp_project/
 
 Allowed libraries: `numpy`, `matplotlib`, `pandas`, `argparse`.
 
-## 2. Data Preparation (`data_split.py`)
+## 2. Data Preparation (`data_split.py`) --------------- OK
 
 Goal: Prepare the dataset for training and validation.
 

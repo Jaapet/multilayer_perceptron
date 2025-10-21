@@ -52,21 +52,142 @@ python data_split.py --dataset data/wdbc.csv --train_ratio 0.8 --seed 42
 
 Goal: Define the class structure for the MLP.
 
-Main classes:
+### 3.1 Dense Layer Implementation
 
-- `DenseLayer`: manages weights, bias, activation, and forward/backward passes.
-- Activation functions: `Sigmoid`, `Tanh`, `ReLU`, `Softmax`.
-- `MLP`: list of layers + `forward()` and `backward()` + `update_weights()`.
+Goal: Represent one fully connected layer in the network.
 
-Components to implement:
+#### Components:
 
-- Initialization of weights (He or Xavier).
-- Feedforward computation.
-- Backpropagation with gradient descent.
-- Loss functions:
+1. **Weights and Biases**
+   - Initialize using:
+     - Xavier/Glorot initialization for tanh/sigmoid
+     - He initialization for ReLU
+   
+2. **Activation Function**
+   - Layer stores reference to activation function
+   
+3. **Forward Pass**
+   - Compute $Z = XW + b$
+   - Apply activation: $A = activation(Z)$
+   
+4. **Backward Pass**
+   - Compute gradients: dW, db, dX
+   - Store gradients for weight update
 
-  - Binary cross-entropy for final evaluation.
-  - Mean loss per epoch for training.
+#### Class Skeleton:
+```python
+class DenseLayer:
+    def __init__(self, input_size, output_size, activation, initialization="he"):
+        self.input_size = input_size
+        self.output_size = output_size
+        self.activation = activation
+        self.initialization = initialization
+        self.initialize_weights()
+
+    def initialize_weights(self):
+        # Xavier or He initialization
+
+    def forward(self, X):
+        # Compute Z = X W + b
+        # Apply activation
+        # Store X and Z for backward
+
+    def backward(self, dA):
+        # Compute gradients: dW, db, dX
+        # Using chain rule
+        # Return dX to propagate backward
+```
+
+### 3.2 Activation Functions
+
+Goal: Compute both forward and derivative for backpropagation.
+
+| Activation | Forward | Backward/Derivative |
+|------------|---------|-------------------|
+| Sigmoid | $\sigma(x) = \frac{1}{1 + e^{-x}}$ | $\sigma'(x) = \sigma(x)(1-\sigma(x))$ |
+| Tanh | $\tanh(x)$ | $1-\tanh^2(x)$ |
+| ReLU | $\max(0,x)$ | 1 if x>0 else 0 |
+| Softmax | $\text{softmax}(x_i)=\frac{e^{x_i}}{\sum_j e^{x_j}}$ | Use derivative in cross-entropy combined |
+
+Implementation tips:
+- Each can be a class or function returning both forward and derivative
+- For Softmax, subtract max before exponentiating for numerical stability
+
+### 3.3 MLP Implementation
+
+Goal: Represent the full network as a sequence of layers.
+
+#### Components:
+
+1. **Layer Management**
+   - Store list of DenseLayer objects
+   
+2. **Forward Pass**
+   - Chain: X → layer1.forward() → layer2.forward() → ... → output
+   
+3. **Backward Pass**
+   - Chain: dLoss → last_layer.backward() → ... → first_layer.backward()
+   
+4. **Weight Updates**
+   - W = W - lr * dW
+   - b = b - lr * db
+
+#### Class Skeleton:
+```python
+class MLP:
+    def __init__(self, layers_config, learning_rate=0.01):
+        self.layers = []
+        for config in layers_config:
+            layer = DenseLayer(**config)
+            self.layers.append(layer)
+        self.learning_rate = learning_rate
+
+    def forward(self, X):
+        A = X
+        for layer in self.layers:
+            A = layer.forward(A)
+        return A
+
+    def backward(self, dLoss):
+        dA = dLoss
+        for layer in reversed(self.layers):
+            dA = layer.backward(dA)
+
+    def update_weights(self):
+        for layer in self.layers:
+            layer.W -= self.learning_rate * layer.dW
+            layer.b -= self.learning_rate * layer.db
+```
+
+### 3.4 Loss Functions
+
+Binary Cross-Entropy (for binary classification):
+
+$L = -\frac{1}{m}\sum_i y_i\log(\hat{y}_i) + (1-y_i)\log(1-\hat{y}_i)$
+
+Gradient with respect to predictions:
+
+$dA = -\frac{y}{\hat{y}} + \frac{1-y}{1-\hat{y}}$
+
+### 3.5 Weight Initialization
+
+1. **He Initialization** (for ReLU):
+   $W \sim N(0, \sqrt{\frac{2}{n_{in}}})$
+
+2. **Xavier Initialization** (for Sigmoid/Tanh):
+   $W \sim N(0, \sqrt{\frac{1}{n_{in}}})$
+
+Biases can be initialized to 0.
+
+### 3.6 Implementation Tips
+
+1. Keep layer and activation classes separate
+2. Each class should store its forward pass info for backprop
+3. Test components independently:
+   - Forward of one layer
+   - Backward of one layer
+   - Activation derivatives
+4. Start with small network (1 hidden layer) and small dataset for debugging
 
 ## 4. Training Logic (`train.py`)
 
